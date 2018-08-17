@@ -1,15 +1,15 @@
 # Data-Warehouse
 
 ## Install Requirements
-pip install config
-
-config.py is not included in this repo because it has sensitive information. Please request this file from Kyle Pierce.
-
+cd domo-scripts
 pip install awscli
 Then fill out the AWS credentials. Config file does not have aws info.
 
-pip install boto3
+Then install the rest
+pip install -r requirements.txt
 
-pip install s3fs
+secrets.py is not included in this repo because it has sensitive information. Please request this file from Kyle Pierce.
+
+
 
 
