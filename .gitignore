@@ -1,5 +1,5 @@
 /domo-scripts/secret.py
 /domo-scripts/__pycache__
 .ipynb_checkpoints
-/domo-scripts/*.xlsx
-/domo-scripts/*.csv
+*.xlsx
+*.csv

@@ -46,7 +46,7 @@ datasets = domo.datasets
 # Id of the dataset when we upload.
 final_dataset_id = "d15aae88-4950-420d-8a89-8624443dc533"
 
-# To create a dataset you need to create schema. 
+# To create a dataset you need to create schema.
 # NOTE: Will throw an error if you have wrong # of columns
 
 # data_schema = Schema([
@@ -133,20 +133,20 @@ generatedDispos = pd.DataFrame(newDispos, columns=["propertyid", "dispo", 'date'
 
 ##### Import Dispos #####
 # [Temp] customer diso file not in S3
-status = pd.read_excel('./Dispos.xlsx')
-status = status.drop(columns=[
-    'dispid', 'userid', 'hour', 'status', 'description', 'timezone', 'timeEST',
-    '_BATCH_ID_', '_BATCH_LAST_RUN_'
-])
+# status = pd.read_excel('./Dispos.xlsx')
+# status = status.drop(columns=[
+#     'dispid', 'userid', 'hour', 'status', 'description', 'timezone', 'timeEST',
+#     '_BATCH_ID_', '_BATCH_LAST_RUN_'
+# ])
 
 # Get file from S3
-# dispoFile = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/Dispo1.csv')
+dispoFile = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/DispoAdmin1.csv')
 
-# # Create dataframe
-# status = pd.read_csv(dispoFile['Body'], index_col=0, low_memory=False)
+# Create dataframe
+status = pd.read_csv(dispoFile['Body'], encoding="ISO-8859-1", index_col=0, low_memory=False)
 
-# # Remove Junk
-# status = status.drop(columns=['dispid','userid', 'hour', 'status', 'description', 'timezone', 'timeEST'])
+# Remove Junk
+status = status.drop(columns=['userid', 'hour', 'status', 'description', 'timezone', 'timeEST'])
 
 # ---- End Import Dispos -----
 
@@ -393,6 +393,10 @@ finaldispos['dispo'].replace([
 # ----- End of Cleaning ------
 
 
+# # Bunch of random strings. Needs to be filtered to ensure properly catergorize.
+# # NOTE: Only needs to run to get the list of dispos.
+# listOfDispos = finaldispos.dispo.unique()
+# print(listOfDispos)
 
 # We only need the dispos for VPL
 finaldispos = finaldispos.loc[finaldispos['dispo'].isin([
@@ -402,11 +406,7 @@ finaldispos = finaldispos.loc[finaldispos['dispo'].isin([
     "Inventory - Scheduled", "Inventory - Ready to Relist", "Check Requested"
 ])]
 
-# Bunch of random strings. Needs to be filtered to ensure properly catergorize.
-# NOTE: Only needs to run to get the list of dispos.
 
-# listOfDispos = finaldispos.dispo.unique()
-# print(listOfDispos)
 
 # Clean dispo date
 finaldispos['date'].replace('', np.nan, inplace=True)
@@ -449,8 +449,8 @@ count = count.drop(columns=['Today'])
 count['totalDays'] = count.sum(axis=1)
 count['Start Date'] = properties['cleanDate']
 
-# Save the final product as a csv. Useful for testing the data is coming out.
-count.to_csv('export-test.csv')
+# # Save the final product as a csv. Useful for testing the data is coming out.
+# count.to_csv('export-test.csv')
 
 # Finally export and update domo
 final = count.to_csv(header=False)
