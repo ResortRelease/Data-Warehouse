@@ -4,6 +4,7 @@ from io import StringIO
 from datetime import datetime
 import pandas as pd
 import numpy as np
+from progress.bar import Bar
 
 import boto3 #AWS
 import botocore
@@ -96,9 +97,13 @@ data_schema = Schema([
 
 # ---- End Domo Config ------ #
 
+bar = Bar('Processing', max=3)
+bar.start()
+
 ##### Import Property #####
 # Get file from S3. Note: Double period is not a typo...
 propertyFile = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/Properties1..csv')
+bar.next()  # Annoying to have to wait. Little status update.
 
 # Load it into dataframe without saving
 properties = pd.read_csv(propertyFile['Body'], index_col=0, low_memory=False)
@@ -147,6 +152,7 @@ generatedDispos = pd.DataFrame(newDispos, columns=["propertyid", "dispo", 'date'
 
 # Get file from S3
 dispoFile = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/DispoAdmin1.csv')
+bar.next()  # Annoying to have to wait. Little status update.
 
 # Create dataframe
 status = pd.read_csv(dispoFile['Body'], encoding="ISO-8859-1", index_col=0, low_memory=False)
@@ -465,5 +471,6 @@ final = count.to_csv(header=False)
 
 # Upload to DOMO!
 datasets.data_import(final_dataset_id, final)
-
+bar.next()  # Annoying to have to wait. Little status update.
+bar.finish()
 print("le fin")

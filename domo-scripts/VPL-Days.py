@@ -4,6 +4,7 @@ from io import StringIO
 from datetime import datetime
 import pandas as pd
 import numpy as np
+from progress.bar import Bar
 
 import boto3 #AWS
 import botocore
@@ -50,28 +51,29 @@ final_dataset_id = "d15aae88-4950-420d-8a89-8624443dc533"
 # NOTE: Will throw an error if you have wrong # of columns
 
 # data_schema = Schema([
-#   Column(ColumnType.STRING, "propertyid"),
-#   Column(ColumnType.LONG, "Check Requested"),
-#   Column(ColumnType.LONG, "Closed"),
-#   Column(ColumnType.LONG, "Doc Date"),
-#   Column(ColumnType.LONG, "Estoppel"),
-#   Column(ColumnType.LONG, "Execution"),
-#   Column(ColumnType.LONG, "Inventory"),
-#   Column(ColumnType.LONG, "Inventory - Active"),
-#   Column(ColumnType.LONG, "Inventory - New"),
-#   Column(ColumnType.LONG, "Inventory - Ready to Relist"),
-#   Column(ColumnType.LONG, "Inventory - Scheduled"),
-#   Column(ColumnType.LONG, "Inventory - Unsold"),
-#   Column(ColumnType.LONG, "Purchase Agreement"),
-#   Column(ColumnType.LONG, "Sale Date"),
-#   Column(ColumnType.LONG, "Transfered"),
-#   Column(ColumnType.LONG, "Welcome"),
-#   Column(ColumnType.STRING, "Status"),
-#   Column(ColumnType.STRING, "Sold"),
-#   Column(ColumnType.LONG, "Since Update"),
-#   Column(ColumnType.STRING, "Resort Family"),
-#   Column(ColumnType.LONG, "totalDays"),
-#   Column(ColumnType.DATE, "Start Date"),
+#     Column(ColumnType.STRING, "propertyid"),
+#     Column(ColumnType.LONG, "Check Requested"),
+#     Column(ColumnType.LONG, "Closed"),
+#     Column(ColumnType.LONG, "Doc Date"),
+#     Column(ColumnType.LONG, "Estoppel"),
+#     Column(ColumnType.LONG, "Execution"),
+#     Column(ColumnType.LONG, "Inventory"),
+#     Column(ColumnType.LONG, "Inventory - Active"),
+#     Column(ColumnType.LONG, "Inventory - New"),
+#     Column(ColumnType.LONG, "Inventory - Ready to Relist"),
+#     Column(ColumnType.LONG, "Inventory - Scheduled"),
+#     Column(ColumnType.LONG, "Inventory - Unsold"),
+#     Column(ColumnType.LONG, "Purchase Agreement"),
+#     Column(ColumnType.LONG, "Sale Date"),
+#     Column(ColumnType.LONG, "Transfer Days"),
+#     Column(ColumnType.LONG, "Transfered"),
+#     Column(ColumnType.LONG, "Welcome"),
+#     Column(ColumnType.STRING, "Status"),
+#     Column(ColumnType.STRING, "Sold"),
+#     Column(ColumnType.LONG, "Since Update"),
+#     Column(ColumnType.STRING, "Resort Family"),
+#     Column(ColumnType.LONG, "totalDays"),
+#     Column(ColumnType.DATE, "Start Date"),
 # ])
 
 # # # Create dataset
@@ -103,12 +105,14 @@ properties = properties.loc[-properties['status'].isin(["0", "1d", "1e", "1f", "
 
 # We only can work with transfers so remove morgage
 properties = properties.loc[properties['mt_tr'].isin(["TRANSFER"])]
-properties = properties.loc[properties['inv_deed'].isin(["Inventory"])]
+# properties = properties.loc[properties['inv_deed'].isin(["Inventory"])]
 properties['resortfamily'] = properties['resortfamily'].str.title()
 
 # Make a list of the properties that match the requirements
 listOfProperties = properties.index.tolist()
 
+bar = Bar('Processing', max=3)
+bar.start()
 # Unwind "statusarray" into status as new dispos
 # propertyid, dispo, cleanDate
 newDispos = []
@@ -116,7 +120,7 @@ for index, row in properties.iterrows():
     if (len(row['statusarray']) > 1):
         newDispos.append([index, "Sale Date", row['startdate']])
         newDispos.append([index, "Doc Date", row['doc_date']])
-        newDispos.append([index, "Today", "20180813"])
+        newDispos.append([index, "Today", "20181003"])
         arrayOfStatus = row['statusarray'].split("|")
         if (len(arrayOfStatus) > 1):
             for singleStatus in arrayOfStatus[1:]:
@@ -141,6 +145,7 @@ generatedDispos = pd.DataFrame(newDispos, columns=["propertyid", "dispo", 'date'
 
 # Get file from S3
 dispoFile = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/DispoAdmin1.csv')
+bar.next()  # Annoying to have to wait. Little status update.
 
 # Create dataframe
 status = pd.read_csv(dispoFile['Body'], encoding="ISO-8859-1", index_col=0, low_memory=False)
@@ -155,6 +160,7 @@ status = status.drop(columns=['userid', 'hour', 'status', 'description', 'timezo
 ##### Import Stages (dispos) #####
 # Get file from S3
 stageFile = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/Stages1.csv')
+bar.next() # Annoying to have to wait. Little status update.
 
 # Create dataframe
 stages = pd.read_csv(stageFile['Body'], index_col=0, low_memory=False)
@@ -186,6 +192,8 @@ finaldispos = pd.concat([status, generatedDispos, stages], ignore_index=True)
 finaldispos = finaldispos.loc[finaldispos['propertyid'].isin(listOfProperties)]
 
 # Clean dispo names. Renamed dispos to simplify
+finaldispos['dispo'].replace(["1b"], "Transfer Days", inplace=True)
+
 finaldispos['dispo'].replace([
   "2",
   'MASTER PROCESS CHANGED TO Welcome - SUB PROCESS CHANGED TO 21 Day Letter Sent',
@@ -399,7 +407,7 @@ finaldispos['dispo'].replace([
 # print(listOfDispos)
 
 # We only need the dispos for VPL
-finaldispos = finaldispos.loc[finaldispos['dispo'].isin([
+finaldispos = finaldispos.loc[finaldispos['dispo'].isin(["Transfer Days",
     "Sale Date", "Welcome", "Estoppel", "Inventory", "Purchase Agreement",
     "Hold", "Execution", "Transfered", "Doc Date", "Closed", "Today",
     "Inventory - New", "Inventory - Active", "Inventory - Unsold",
@@ -472,5 +480,6 @@ final = count.to_csv(header=False)
 
 # Upload to DOMO!
 datasets.data_import(final_dataset_id, final)
-
+bar.next()  # Annoying to have to wait. Little status update.
+bar.finish()
 print("le fin")

@@ -1,5 +1,7 @@
-/domo-scripts/secret.py
-/domo-scripts/__pycache__
+secret.py
+__pycache__
 .ipynb_checkpoints
 *.xlsx
 *.csv
+.DS_Store
+.gitignore
