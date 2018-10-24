@@ -456,7 +456,7 @@ count = count.drop(columns=['Today'])
 count['totalDays'] = count.sum(axis=1)
 count['Start Date'] = properties['cleanDate']
 
-# # Save the final product as a csv. Useful for testing the data is coming out.
+# Save the final product as a csv. Useful for testing the data is coming out.
 count.to_csv('export-test.csv')
 
 # Finally export and update domo
