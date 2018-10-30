@@ -10,39 +10,39 @@ from progress.bar import Bar
 import boto3 #AWS
 import botocore
 
-#### Domo Config #####
+# #### Domo Config #####
 
-from pydomo import Domo
+# from pydomo import Domo
 
-from pydomo.datasets import DataSetRequest, Schema, Column, ColumnType, Policy
-from pydomo.datasets import PolicyFilter, FilterOperator, PolicyType, Sorting, UpdateMethod
+# from pydomo.datasets import DataSetRequest, Schema, Column, ColumnType, Policy
+# from pydomo.datasets import PolicyFilter, FilterOperator, PolicyType, Sorting, UpdateMethod
 
-# Build an SDK configuration
-client_id = secret.domo_id
-client_secret = secret.domo_secret
-api_host = 'api.domo.com'
+# # Build an SDK configuration
+# client_id = secret.domo_id
+# client_secret = secret.domo_secret
+# api_host = 'api.domo.com'
 
-# Configure the logger
-handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logging.getLogger().addHandler(handler)
+# # Configure the logger
+# handler = logging.StreamHandler()
+# handler.setLevel(logging.INFO)
+# formatter = logging.Formatter(
+#     '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# handler.setFormatter(formatter)
+# logging.getLogger().addHandler(handler)
 
-# Create an instance of the SDK Client
-domo = Domo(
-    client_id,
-    client_secret,
-    logger_name='foo',
-    log_level=logging.INFO,
-    api_host=api_host)
+# # Create an instance of the SDK Client
+# domo = Domo(
+#     client_id,
+#     client_secret,
+#     logger_name='foo',
+#     log_level=logging.INFO,
+#     api_host=api_host)
 
-dsr = DataSetRequest()
-datasets = domo.datasets
+# dsr = DataSetRequest()
+# datasets = domo.datasets
 
-# Id of the dataset when we upload.
-final_dataset_id = "d69879f6-b655-4756-a7d5-27d10b64a7e7"
+# # Id of the dataset when we upload.
+# final_dataset_id = "d69879f6-b655-4756-a7d5-27d10b64a7e7"
 
 # To create a dataset you need to create schema.
 # NOTE: Will throw an error if you have wrong # of columns
@@ -100,6 +100,24 @@ contacts = pd.read_csv(
     encoding="ISO-8859-1",
 )
 
+# Number of dispos
+webhooks = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/WebHook1.csv')
+
+webhooks = pd.read_csv(
+    webhooks['Body'],
+    index_col=0,
+    low_memory=False,
+    encoding="ISO-8859-1",
+)
+
+us_zip = pd.read_csv(
+    './US.csv',
+    index_col=False,
+    low_memory=False
+)
+
+# drop new leads to speed up.
+webhooks = webhooks.loc[-webhooks['hook_action'].isin(["NEW LEAD", "NONE/BLANK", "NONE/AHEAD"])]
 
 bar.next()
 
@@ -187,8 +205,27 @@ def decide_source(row):
       return row['medium']
   else:
     return row['medium']
-  
-contacts = contacts[['status', 'hearduson', 'LeadSource', 'SubSource', 'datecr', 'salesdate',  'utm_campaign', 'utm_source', 'utm_medium', 'dnc', 'sold_tr', 'sold_mt']]
+
+def reassign(row):
+  # User reapplied we need to find the webhook and add the source.
+  reapplied = True if row.webhook < 0 else False 
+  if reapplied == True:
+    return row
+  else:
+    return row
+
+def add_county(zip):
+  if pd.isna(zip) == False:
+    pattern = re.compile("^[\d]{5}")
+    is_number = bool(pattern.match(zip))
+    if is_number == True:
+      # find zip in us_zip
+      row = us_zip.loc[us_zip['zip'].isin([zip])]
+      if len(row['county'].values) > 0:
+        # Return county
+        return row['county'].values[0]
+
+contacts = contacts[['status', 'hearduson', 'LeadSource', 'SubSource', 'datecr', 'salesdate',  'utm_campaign', 'utm_source', 'utm_medium','dnc', 'sold_tr', 'sold_mt', 'dateASAP', 'HomePhone', 'SecondaryPhone', 'EmailAddress', 'ZipCode', 'State']]
 # 'ClientName', 'HomePhone', 'SecondaryPhone', 'EmailAddress', 
 # 'NameofResort',
 # 'lastdispo',
@@ -254,7 +291,9 @@ bar.next()
 contacts.rename(columns={'LeadSource': 'Brand'}, inplace=True)
 
 # Clean created date
+contacts['dateASAP'] = contacts['dateASAP'].apply(format_date)
 contacts['datecr'] = contacts['datecr'].apply(format_date)
+
 # Clean sales date. If sales date exists then we will set sale as true otherwise false
 contacts['salesdate'] = contacts['salesdate'].apply(format_date)
 
@@ -263,7 +302,7 @@ contacts['utm_campaign'] = contacts['utm_campaign'].astype(str)
 contacts['utm_campaign'] = contacts['utm_campaign'].apply(clean_campaign)
 contacts['utm_campaign'].replace(['nan'], "", inplace=True)
 
-# Heard us on. i.e radio mainly. This is sales person 
+# Heard us on. i.e radio mainly. This is sales person entering in the data.
 contacts['hearduson'] = contacts['hearduson'].astype(str)
 contacts['hearduson'].replace(['nan'], "", inplace=True)
 
@@ -279,17 +318,26 @@ contacts['utm_source'].replace(['nan'], "", inplace=True)
 # Just lowercase the medium
 contacts['utm_medium'] = contacts['utm_medium'].apply(clean_campaign)
 
+# Make sure the date fields are dates
+contacts['dateASAP'] = pd.to_datetime(contacts['dateASAP'])
+contacts['datecr'] = pd.to_datetime(contacts['datecr'])
+contacts['salesdate'] = pd.to_datetime(contacts['salesdate'])
+
+# If the datecreated and callASAP are diffrent we need to update the source to reflect the new source
+contacts['webhook'] = (contacts['datecr'] - contacts['dateASAP']).dt.days
+
+# Replace rows with updated webhook info
+contacts = contacts.apply(reassign, axis=1)
+
 # Apply source that is appropriate
 contacts['source'] = contacts.apply(decide_source, axis=1)
 
 contacts['total sold'] = contacts['sold_tr'] + contacts['sold_mt']
 
-# Make sure the date fields are dates
-contacts['datecr'] = pd.to_datetime(contacts['datecr'])
-contacts['salesdate'] = pd.to_datetime(contacts['salesdate'])
+contacts['county'] = contacts['ZipCode'].apply(add_county)
 
 # Find the difference in days
-contacts['days'] = abs((contacts['datecr'] - contacts['salesdate']).dt.days)
+contacts['days'] = abs((contacts['dateASAP'] - contacts['salesdate']).dt.days)
 
 bar.next()
 
@@ -302,13 +350,24 @@ bar.next()
 # listOfSub = pd.DataFrame(contacts['SubSource'].unique())
 # listOfSub.to_csv("export-sub.csv")
 
+# # Number of dispos
+# dispos = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/Dispo1.csv')
+
+# dispos = pd.read_csv(
+#     dispos['Body'],
+#     index_col=0,
+#     low_memory=False,
+#     encoding="ISO-8859-1",
+# )
+# contacts['Dispo Count'] = pd.Series(contacts.index, index=contacts.index).map(dispos['dealid'].value_counts())
+
 contacts = contacts.drop(columns=['sold_tr', 'sold_mt', 'medium'])
 
 # Save the final product as a csv. Useful for testing the data is coming out.
-# contacts.to_csv('export-mk.csv')
+contacts.to_csv('export-mk.csv')
 # print(contacts.dtypes)
 
-final = contacts.to_csv(header=False)
+# final = contacts.to_csv(header=False)
 
-datasets.data_import(final_dataset_id, final)
+# datasets.data_import(final_dataset_id, final)
 bar.finish()
