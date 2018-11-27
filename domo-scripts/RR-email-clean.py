@@ -53,7 +53,16 @@ def fronter_name(name):
   else:
     return "Qualification Specialist" 
 
-
+# Format the dates to MM/DD/YYYY
+def format_date(date):
+  if pd.isna(date) == False:
+    string_date = str(date)
+    month = string_date[4:6]
+    day = string_date[6:8]
+    year = string_date[0:4]
+    return (f'{month}/{day}/{year}')
+  else:
+    return False
 
 def segment_list():
   # Drop dnc with 1 
@@ -90,10 +99,10 @@ def generate_email_list():
   print("\n Removed emails:", contacts.shape[0])
 
   # Clean created date
-  contacts['datecr'] = contacts['datecr'].apply(rr_fun.format_date)
+  contacts['datecr'] = contacts['datecr'].apply(format_date)
 
   # Clean sales date
-  contacts['salesdate'] = contacts['salesdate'].apply(rr_fun.format_date)
+  contacts['salesdate'] = contacts['salesdate'].apply(format_date)
 
   # Drop if there is a sale date
   contacts = contacts.loc[contacts['salesdate'].isin([False])]
@@ -189,6 +198,7 @@ def generate_phone_list():
   # Merge duplicates
   contacts = contacts.groupby('HomePhone').agg({
                               'datecr': 'first', 
+                              'First Name': 'first', 
                               'lastdispo': 'first', 
                               'status': ', '.join, 
                               'dnc':', '.join})

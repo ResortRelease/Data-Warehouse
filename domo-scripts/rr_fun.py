@@ -61,17 +61,6 @@ def clean_status(x):
     cleaned = re.findall("^[a-zA-Z09]*[^-]", x)[0]
     return cleaned
 
-# Format the dates to MM/DD/YYYY
-def format_date(date):
-  if pd.isna(date) == False:
-    string_date = str(date)
-    month = string_date[4:6]
-    day = string_date[6:8]
-    year = string_date[0:4]
-    return (f'{month}/{day}/{year}')
-  else:
-    return False
-
 # Resort names / generic cleaning
 def clean_name(x):
   if pd.isna(x) == False:
