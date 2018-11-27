@@ -9,9 +9,11 @@ Then fill out the AWS credentials. Config file does not have aws info.
 
 Then install the rest
 
-```pip install -r requirements.txt```
+```brew install pipenv```
 
-```secrets.py``` is not included in this repo because it has sensitive information. Please request this file from Kyle Pierce.
+```pipenv install```
+
+```secrets.py``` (deprecated domo) is not included in this repo because it has sensitive information. Please request this file from Kyle Pierce. 
 
 
 

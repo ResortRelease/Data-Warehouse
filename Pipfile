@@ -1,0 +1,16 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+pandas = "~=0.22.0"
+numpy = "~=1.14.0"
+boto3 = "~=1.7.79"
+botocore = "~=1.10.79"
+progress = "~=1.4"
+
+[requires]
+python_version = "3.6"
