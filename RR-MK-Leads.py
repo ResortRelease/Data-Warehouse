@@ -172,17 +172,8 @@ dispos = pd.read_csv(
 # How many dispos each client has
 contacts['Dispo Count'] = pd.Series(contacts.index, index=contacts.index).map(dispos['dealid'].value_counts())
 
-# Giving sales a cohort
-contacts['Sales Week #'] = contacts['salesdate'].dt.week
-contacts['Sales Year'] = contacts['salesdate'].dt.year
-
-# Giving creation a cohort
-contacts['Created Week #'] = contacts['datecr'].dt.week
-contacts['Created Year'] = contacts['datecr'].dt.year
-
-# Giving creation a cohort
-contacts['ASAP Week #'] = contacts['dateASAP'].dt.week
-contacts['ASAP Year'] = contacts['dateASAP'].dt.year
+# If sold 1 else 0
+contacts['sold'] = contacts["salesdate"].apply(rr_fun.was_sold)
 
 # Remove some extra fields
 contacts = contacts.drop(columns=['sold_tr', 'sold_mt', 'medium', 'hearduson', 'utm_campaign', 'utm_source', 'utm_medium', 'SecondaryPhone', 'EmailAddress', 'ZipCode', 'State', 'webhook'])

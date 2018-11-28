@@ -173,3 +173,9 @@ def add_county(zip):
       if len(row['county'].values) > 0:
         # Return county
         return row['county'].values[0]
+
+def was_sold(val):
+  if val == False:
+    return 0
+  else:
+    return 1
