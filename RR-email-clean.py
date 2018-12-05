@@ -37,7 +37,7 @@ def load_contacts():
 
   # We only need a handful of columns
   # contacts.drop(columns=['status', 'datecr', 'salesdate', 'ClientName', 'NameofResort', 'HomePhone', 'EmailAddress', 'lastdispo', 'hasform', 'dnc'])
-  contacts = contacts.drop(columns=['LeadSource', 'SubSource', 'timestamp', 'timeASAP', 'dateASAP', 'aweberid', 'salesfusionid', 'mortgage', 'appsetdate', 'appverdate', 'cancelsale', 'holdsale', 'sold_tr', 'sold_mt', 'sold_tr_rev', 'sold_mt_rev', 'FRONTER_REP', 'CLOSER_REP', 'VERIFY', 'StreetAddress', 'City', 'State', 'ZipCode', 'SecondaryPhone', 'timezone', 'reserve', 'reservetime',  'lastfronter', 'lastdispodate', 'emergency', 'utm_term', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'hasapp', 'sold_tr_rev_net', 'sold_mt_rev_net', 'hearduson', 'heardother', 'sold_tr1', 'sold_mt1', 'tfdb_case', 'qareport', 'qareport1', 'MQL', 'SQL', 'SQT', 'SQT.1', 'Nurture'])
+  contacts = contacts.drop(columns=['LeadSource', 'SubSource', 'timestamp', 'timeASAP', 'aweberid', 'salesfusionid', 'mortgage', 'appsetdate', 'appverdate', 'cancelsale', 'holdsale', 'sold_tr', 'sold_mt', 'sold_tr_rev', 'sold_mt_rev', 'FRONTER_REP', 'CLOSER_REP', 'VERIFY', 'StreetAddress', 'City', 'State', 'ZipCode', 'SecondaryPhone', 'timezone', 'reserve', 'reservetime',  'lastfronter', 'lastdispodate', 'emergency', 'utm_term', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'hasapp', 'sold_tr_rev_net', 'sold_mt_rev_net', 'hearduson', 'heardother', 'sold_tr1', 'sold_mt1', 'tfdb_case', 'qareport', 'qareport1', 'MQL', 'SQL', 'SQT', 'SQT.1', 'Nurture'])
 
   return contacts
 
@@ -98,10 +98,9 @@ def generate_email_list():
   contacts = contacts.loc[-contacts['EmailAddress'].isin(["Not a valid email"])]
   print("\n Removed emails:", contacts.shape[0])
 
-  # Clean created date
+  # Clean dates
   contacts['datecr'] = contacts['datecr'].apply(format_date)
-
-  # Clean sales date
+  contacts['dateASAP'] = contacts['dateASAP'].apply(format_date)
   contacts['salesdate'] = contacts['salesdate'].apply(format_date)
 
   # Drop if there is a sale date
@@ -134,6 +133,7 @@ def generate_email_list():
   # Merge duplicates
   contacts = contacts.groupby('EmailAddress').agg({
                               'datecr': 'first', 
+                              'dateASAP': 'first', 
                               'salesdate': 'any', 
                               'Full Name': 'first', 
                               'First Name': 'first', 
@@ -198,6 +198,7 @@ def generate_phone_list():
   # Merge duplicates
   contacts = contacts.groupby('HomePhone').agg({
                               'datecr': 'first', 
+                              'dateASAP': 'first', 
                               'First Name': 'first', 
                               'lastdispo': 'first', 
                               'status': ', '.join, 
