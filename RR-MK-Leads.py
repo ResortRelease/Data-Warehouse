@@ -23,7 +23,8 @@ contacts = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/Deals1.csv')
 
 contacts = pd.read_csv(
     contacts['Body'],
-    index_col=0,
+    # './Imports/Deals1.csv',
+    index_col=False,
     low_memory=False,
     encoding="ISO-8859-1",
 )
@@ -31,7 +32,7 @@ contacts = pd.read_csv(
 bar.next()
 
 # Remove all columns except the following
-contacts = contacts[['status', 'hearduson', 'LeadSource', 'SubSource', 'datecr', 'salesdate',  'utm_campaign', 'utm_source', 'utm_medium','dnc', 'sold_tr', 'sold_mt', 'dateASAP', 'HomePhone', 'SecondaryPhone', 'EmailAddress', 'ZipCode', 'State', 'hasform']]
+# contacts = contacts[['dealid', 'hearduson', 'LeadSource', 'SubSource', 'datecr', 'salesdate', 'dnc', 'sold_tr', 'sold_mt', 'dateASAP', 'HomePhone', 'SecondaryPhone', 'EmailAddress', 'ZipCode', 'State', 'hasform']]
 
 # Scrape details from leadsource to apply to medium
 contacts['medium'] = contacts['LeadSource'].apply(rr_fun.decide_medium)
@@ -124,6 +125,7 @@ contacts['hearduson'].replace(['nan'], "", inplace=True)
 
 # Sub source 
 contacts['SubSource'] = contacts['SubSource'].astype(str)
+contacts['SubSource'] = contacts['SubSource'].str.lower()
 contacts['SubSource'].replace(['nan'], "", inplace=True)
 
 # Clean the source for the final source
@@ -171,118 +173,17 @@ dispos = pd.read_csv(
 contacts['Dispo Count'] = pd.Series(contacts.index, index=contacts.index).map(dispos['dealid'].value_counts())
 
 # If sold 1 else 0
-contacts['sold'] = contacts["salesdate"].apply(rr_fun.was_sold)
+contacts['was sold'] = contacts["salesdate"].apply(rr_fun.was_sold)
 
 # Remove some extra fields
-contacts = contacts.drop(columns=['sold_tr', 'sold_mt', 'medium', 'hearduson', 'utm_campaign', 'utm_source', 'utm_medium', 'SecondaryPhone', 'EmailAddress', 'ZipCode', 'State', 'webhook'])
+contacts = contacts[["dealid", "status", "Brand", "source", "SubSource", "datecr", "dateASAP", "salesdate", "cancelsale", "utm_term", "utm_campaign", "utm_source", "utm_medium", "utm_content", "hearduson", "total sold", "base64", "days", "was sold"]]
 
 # Save the final product as a csv.
-contacts.to_csv('export-mk.csv')
-final_csv = contacts.to_csv(None)
+# contacts.to_csv('./Exports/export-mk.csv')
 
+final_csv = contacts.to_csv(None)
 s3_resource = boto3.resource('s3')
 s3_resource.Object('rr-data-test', 'export-mk.csv').put(Body=final_csv)
 bar.next()
 
 bar.finish()
-
-
-# #### Domo Config #####
-
-# from pydomo import Domo
-
-# from pydomo.datasets import DataSetRequest, Schema, Column, ColumnType, Policy
-# from pydomo.datasets import PolicyFilter, FilterOperator, PolicyType, Sorting, UpdateMethod
-
-# # Build an SDK configuration
-# client_id = secret.domo_id
-# client_secret = secret.domo_secret
-# api_host = 'api.domo.com'
-
-# # Configure the logger
-# handler = logging.StreamHandler()
-# handler.setLevel(logging.INFO)
-# formatter = logging.Formatter(
-#     '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# handler.setFormatter(formatter)
-# logging.getLogger().addHandler(handler)
-
-# # Create an instance of the SDK Client
-# domo = Domo(
-#     client_id,
-#     client_secret,
-#     logger_name='foo',
-#     log_level=logging.INFO,
-#     api_host=api_host)
-
-# dsr = DataSetRequest()
-# datasets = domo.datasets
-
-# # Id of the dataset when we upload.
-# final_dataset_id = "d69879f6-b655-4756-a7d5-27d10b64a7e7"
-
-# To create a dataset you need to create schema.
-# NOTE: Will throw an error if you have wrong # of columns
-
-# data_schema = Schema([
-#   Column(ColumnType.LONG, "dealid"),
-#   Column(ColumnType.LONG, "status"),
-#   Column(ColumnType.STRING, "hearduson"),
-#   Column(ColumnType.STRING, "Brand"),
-#   Column(ColumnType.STRING, "SubSource"),
-#   Column(ColumnType.DATE, "datecr"),
-#   Column(ColumnType.DATE, "salesdate"),
-#   Column(ColumnType.STRING, "utm_campaign"),
-#   Column(ColumnType.STRING, "utm_source"),
-#   Column(ColumnType.STRING, "utm_medium"),
-#   Column(ColumnType.LONG, "dnc"),
-#   Column(ColumnType.STRING, "source"),
-#   Column(ColumnType.LONG, "total sold"),
-#   Column(ColumnType.LONG, "days"),
-# ])
-
-# # Create dataset
-# dsr.name = 'MK | Lead Info'
-# dsr.description = 'Cleaned data from Raw source.'
-# dsr.schema = data_schema
-
-# # Create a DataSet with the given Schema
-# dataset = datasets.create(dsr)
-# domo.logger.info("Created DataSet " + dataset['id'])
-# final_dataset_id = dataset['id']
-
-# retrieved_dataset = datasets.get(dataset['id'])
-
-# # ----- Update a DataSets's metadata ----- #
-# update = DataSetRequest()
-# update.name = 'MK | Lead Info'
-# update.description = 'Cleaned data from Raw source.'
-# update.schema = data_schema
-# updated_dataset = datasets.update(final_dataset_id, update)
-
-# ---- End Domo Config ------ #
-
-# # Number of dispos
-# webhooks = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/WebHook1.csv')
-
-# webhooks = pd.read_csv(
-#     webhooks['Body'],
-#     index_col=0,
-#     low_memory=False,
-#     encoding="ISO-8859-1",
-# )
-
-# # drop new leads to speed up.
-# webhooks = webhooks.loc[-webhooks['hook_action'].isin(["NEW LEAD", "NONE/BLANK", "NONE/AHEAD"])]
-
-# Percentage of valid phone #
-# Percentage of email address
-
-# Clean dispo name
-# contacts['lastdispo'] = contacts['lastdispo'].apply(clean_status)
-
-# listOfSub = pd.DataFrame(contacts['SubSource'].unique())
-# listOfSub.to_csv("export-sub.csv")
-
-# final = contacts.to_csv(header=False)
-# datasets.data_import(final_dataset_id, final)

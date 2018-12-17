@@ -30,28 +30,36 @@ def load_contacts():
   # # Load it into dataframe without saving
   contacts = pd.read_csv(
       contacts['Body'],
-      index_col=0,
+      index_col=False,
       low_memory=False,
       encoding="ISO-8859-1",
   )
 
   # We only need a handful of columns
   # contacts.drop(columns=['status', 'datecr', 'salesdate', 'ClientName', 'NameofResort', 'HomePhone', 'EmailAddress', 'lastdispo', 'hasform', 'dnc'])
-  contacts = contacts.drop(columns=['LeadSource', 'SubSource', 'timestamp', 'timeASAP', 'aweberid', 'salesfusionid', 'mortgage', 'appsetdate', 'appverdate', 'cancelsale', 'holdsale', 'sold_tr', 'sold_mt', 'sold_tr_rev', 'sold_mt_rev', 'FRONTER_REP', 'CLOSER_REP', 'VERIFY', 'StreetAddress', 'City', 'State', 'ZipCode', 'SecondaryPhone', 'timezone', 'reserve', 'reservetime',  'lastfronter', 'lastdispodate', 'emergency', 'utm_term', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'hasapp', 'sold_tr_rev_net', 'sold_mt_rev_net', 'hearduson', 'heardother', 'sold_tr1', 'sold_mt1', 'tfdb_case', 'qareport', 'qareport1', 'MQL', 'SQL', 'SQT', 'SQT.1', 'Nurture'])
+  contacts = contacts.drop(columns=['LeadSource', 'SubSource', 'timestamp', 'timeASAP', 'aweberid', 'salesfusionid', 'mortgage', 'appsetdate', 'appverdate', 'cancelsale', 'holdsale', 'sold_tr', 'sold_mt', 'sold_tr_rev', 'sold_mt_rev', 'CLOSER_REP', 'VERIFY', 'StreetAddress', 'City', 'State', 'ZipCode', 'SecondaryPhone', 'timezone', 'reserve', 'reservetime',  'lastfronter', 'lastdispodate', 'emergency', 'utm_term', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'hasapp', 'sold_tr_rev_net', 'sold_mt_rev_net', 'hearduson', 'heardother', 'sold_tr1', 'sold_mt1', 'tfdb_case', 'qareport', 'qareport1', 'MQL', 'SQL', 'SQT', 'SQT.1', 'Nurture'])
 
   return contacts
 
-def fronter_name(name): 
+def fronter_name(name=None, full=False): 
   pattern = re.compile("(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
   if pd.isna(name) == False:
-    if name != "System":
+    return name
+  else:
+    return "Taylor" 
+
+def fronter_full_name(name): 
+  pattern = re.compile("(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
+  if pd.isna(name) == False:
+    if name != "SYSTEM":
       # Seperate last letter
       name = name[:-1].capitalize()
-      return name
+      last_name = name[-1:].capitalize()
+      return name + " " + last_name + "."
     else:
-      return "Qualification Specialist" 
+      return "Taylor M." 
   else:
-    return "Qualification Specialist" 
+    return "Taylor M." 
 
 # Format the dates to MM/DD/YYYY
 def format_date(date):
@@ -128,20 +136,21 @@ def generate_email_list():
   print("\n Removed terminated:", contacts.shape[0])
 
   # last fronter
-  contacts['Last Contacted'] = contacts['reserveuser'].apply(fronter_name)
+  contacts['Agent Full'] = contacts['reserveuser'].apply(fronter_full_name)
+  contacts['Agent First'] = contacts['reserveuser'].apply(fronter_name)
 
   # Merge duplicates
   contacts = contacts.groupby('EmailAddress').agg({
+                              'dealid': 'first',
                               'datecr': 'first', 
                               'dateASAP': 'first', 
                               'salesdate': 'any', 
                               'Full Name': 'first', 
                               'First Name': 'first', 
                               'Last Name': 'first', 
-                              'NameofResort': 'first', 
-                              'lastdispo': 'first', 
                               'HomePhone': 'first', 
-                              'Last Contacted': 'first', 
+                              'Agent Full': 'first', 
+                              'Agent First': 'first', 
                               'hasform': ', '.join, 
                               'status': ', '.join, 
                               'dnc':', '.join})
@@ -159,7 +168,9 @@ def generate_email_list():
   contacts = contacts.loc[-contacts['status'].isin([False])]
   print("\n Only status 1 and 2:", contacts.shape[0])
 
-  contacts.to_csv('export-email.csv')
+  contacts = contacts.drop(columns=['status', 'hasform', 'dnc'])
+
+  contacts.to_csv('./Exports/export-email.csv')
 
   bar.next()
   bar.finish()
@@ -175,6 +186,10 @@ def generate_phone_list():
 
   # Clean created date
   contacts['datecr'] = contacts['datecr'].apply(rr_fun.format_date)
+  contacts['dateASAP'] = contacts['dateASAP'].apply(rr_fun.format_date)
+
+  # last fronter
+  contacts['Last Contacted'] = contacts['reserveuser'].apply(fronter_name)
 
   bar.next()
 
@@ -197,6 +212,7 @@ def generate_phone_list():
 
   # Merge duplicates
   contacts = contacts.groupby('HomePhone').agg({
+                              'dealid': 'first',
                               'datecr': 'first', 
                               'dateASAP': 'first', 
                               'First Name': 'first', 
@@ -213,7 +229,26 @@ def generate_phone_list():
   contacts = contacts.loc[-contacts['status'].isin([False])]
   print("\n Only status 1 and 2:", contacts.shape[0])
 
-  contacts.to_csv('export-phone.csv')
+  contacts = contacts.reset_index()
+
+  lastdispo = pd.read_csv(
+      # users['Body'],
+      './Exports/finaldispos.csv',
+      index_col=False,
+      low_memory=False,
+      encoding="ISO-8859-1",
+  )
+
+  print(contacts.head())
+
+  contacts = pd.merge(contacts, lastdispo, how='inner',
+        left_on='dealid', right_on='dealid')
+
+  contacts['fname'] = contacts['fname'].apply(fronter_name)
+
+  contacts = contacts[['dealid', 'HomePhone', 'datecr', 'dateASAP', 'fname', 'First Name']]
+
+  contacts.to_csv('./Exports/export-phone.csv')
   bar.next()
   bar.finish()
 

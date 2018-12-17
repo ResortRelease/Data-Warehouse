@@ -3,7 +3,7 @@ import pandas as pd
 import base64
 
 us_zip = pd.read_csv(
-    './US.csv',
+    './Imports/US.csv',
     index_col=False,
     low_memory=False
 )
@@ -16,7 +16,9 @@ def clean_client_name(x):
     string_array = x.split(" ") # Create array of strings
     name_length = len(string_array) # Count the length of array
     fullname = ''
-    if(name_length == 1):
+    if (name_length == 0):
+      fullname = "there"
+    elif(name_length == 1):
       fullname = string_array[0]
     elif (name_length == 2):
       fullname = string_array[0] + " " + string_array[1]
@@ -127,23 +129,28 @@ def decide_source(row):
       return 'PPC'
     elif any(x in row.utm_source for x in ["facebookmsg","facebook-messenger"]):
       return 'Social'
+    elif any(x in row.utm_source for x in ["bbb"]):
+      return 'BBB'
     else:
       return 'Other'
   # If contact has a source attach it
   elif has_subsource == True:
     SubSource = row.SubSource.lower()
+    # mark levin, laura ingraham, michael savage
     if any(x in SubSource for x in ["facebook inbound call"]):
       return 'FB Call'
-    elif any(x in SubSource for x in ["facebook"]):
+    elif any(x in SubSource for x in ["refer"]):
+      return 'Referral'
+    elif any(x in SubSource for x in ["facebook", "fb"]):
       return 'Facebook'
-    elif any(x in SubSource for x in ["google","bing","youtube","msn","adroll","linkedin"]):
+    elif any(x in SubSource for x in ["online search", "google","bing","youtube","msn","adroll","linkedin", 'timeshareexitteam', 'buyology iq', 'keywordcampaign']):
       return 'PPC'
     elif any(x in SubSource for x in ["online search"]):
       return 'PPC Call'
     elif any(x in SubSource for x in ["tv"]):
       return 'TV'
     elif any(x in SubSource for x in ["bbb"]):
-      return 'BBB Call'
+      return 'BBB'
     elif any(x in SubSource for x in ["radio"]):
       return 'Radio'
     else:
@@ -175,7 +182,7 @@ def add_county(zip):
         return row['county'].values[0]
 
 def was_sold(val):
-  if val == False:
-    return 0
-  else:
+  if pd.isna(val) == False:
     return 1
+  else:
+    return 0

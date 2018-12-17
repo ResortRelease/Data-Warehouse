@@ -16,7 +16,7 @@ BUCKET_NAME = 'fabiano-crm-consys'
 
 # Import experian data
 experian = pd.read_csv(
-    './experian.csv',
+    './imports/experian.csv',
     index_col=False,
     low_memory=False,
     encoding="ISO-8859-1",
@@ -59,14 +59,14 @@ unique_phone = experian['PHONE'].unique().tolist()
 unique_address = experian['RA RETURNED A1'].unique().tolist()
 
 # Clean name and addresses
-experian['RA RETURNED FIRST NAME'] = experian['RA RETURNED FIRST NAME'].str.title()
-experian['RA RETURNED LAST NAME'] = experian['RA RETURNED LAST NAME'].str.title()
+experian['Clean Name'] = experian['Enhanced'].apply(rr_fun.clean_client_name)
+experian['First Name'], experian['Last Name'] = experian['Clean Name'].str.split(' ', 1).str
 experian['RA RETURNED A1'] = experian['RA RETURNED A1'].str.title()
 experian['RA RETURNED A2'] = experian['RA RETURNED A2'].str.title()
 experian['RA RETURNED CITY'] = experian['RA RETURNED CITY'].str.title()
 
-experian = experian[['EMAILADDRESS', 'PHONE', 'NAME', 'RA RETURNED FIRST NAME', 'RA RETURNED LAST NAME', 'RA RETURNED A1', 'RA RETURNED CITY', 'RA RETURNED STATE', 'RA RETURNED ZIP', 'DealId']]
-experian.to_csv('export-experian.csv')
+experian = experian[['DealId','RA RETURNED A1', 'RA RETURNED CITY', 'RA RETURNED STATE', 'RA RETURNED ZIP', ]]
+experian.to_csv('./Exports/export-experian.csv')
 
 list_of_experian = experian['DealId'].unique().tolist()
 print("Experian", len(list_of_experian))
@@ -132,5 +132,5 @@ print(len(contacts['StreetAddress'].unique().tolist()))
 print(len(contacts['HomePhone'].unique().tolist()))
 print(len(contacts['EmailAddress'].unique().tolist()))
 
-contacts = contacts[['EmailAddress', 'HomePhone', 'ClientName', 'First Name', 'Last Name', 'StreetAddress', 'City', 'State', 'ZipCode']]
-contacts.to_csv('export-addresses.csv')
+contacts = contacts[['dealid','StreetAddress', 'City', 'State', 'ZipCode']]
+contacts.to_csv('./Exports/export-addresses.csv')

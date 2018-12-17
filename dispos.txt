@@ -1,0 +1,89 @@
+admin
+'filepayupdate',
+'fileupdate',
+'closer',
+'dupe',
+'fixerror',
+'oth',
+'callasap',
+'unreserve',
+'2ndfr',
+'undoholdsale',
+'rshsale',
+'spam',
+'undocancel',
+'qarecover',
+'undopendingcancel',
+'vonurt',
+'taskdone',
+'temp dnc',
+'error',
+'pendingcancel',
+'frchg',
+'holdsale',
+'vocbk',
+'voblowout',
+'votask',
+'attyupdate',
+'attyvo',
+
+-------------
+
+fronter
+
+> contacted
+
+>> negative
+'ows',
+'gotrid',
+'cant',
+'notenough',
+'awc',
+'clsrnoap',
+'moveto',
+'custnoap',
+'custnoap_rsch',
+'moveto',
+'mtg not qualified (no fraud)',
+'spanish',
+
+>> positive
+'apset',
+'apconfirmed',
+'aprschld',
+
+> not contacted
+
+'lms',
+'cbk',
+'email',
+'nas',
+'mbf',
+'nit',
+'dnc',
+'dna',
+'wrong',
+'asm',
+'notwknumb',
+'30 days cbk',
+'60 days cbk',
+'90 days cbk',
+'allbusy'
+
+-------------------
+
+closer 
+> contacted
+
+>> Negative
+'nosalecb',
+'nosale',
+'cancelsave',
+>> Positive
+'sale',
+'sentvo-sent to vo',
+
+> not contact
+'ccbk',
+'24follow',
+
