@@ -8,6 +8,13 @@ us_zip = pd.read_csv(
     low_memory=False
 )
 
+def fronter_name(name=None, full=False): 
+  pattern = re.compile("(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)")
+  if pd.isna(name) == False:
+    return name
+  else:
+    return "Taylor" 
+
 def clean_client_name(x):
   if pd.isna(x) == False:
     x = x.lstrip()
@@ -17,7 +24,7 @@ def clean_client_name(x):
     name_length = len(string_array) # Count the length of array
     fullname = ''
     if (name_length == 0):
-      fullname = "there"
+      fullname = "there " + " !"
     elif(name_length == 1):
       fullname = string_array[0]
     elif (name_length == 2):
@@ -95,6 +102,8 @@ def format_date(date):
     day = string_date[6:8]
     year = string_date[0:4]
     return (f'{month}/{day}/{year}')
+  else:
+    return False
 
 def decide_medium(x):
   x = x.lower()
@@ -121,6 +130,8 @@ def decide_source(row):
       return 'TV'
     else:
       return 'Other'
+  elif any(x in row.utm_campaign for x in ["chatbot"]):
+      return 'Facebook Messenger'
   # If contact has a source attach it
   elif has_source == True:
     if any(x in row.utm_source for x in ["facebook.com","facebook","facebookfronter","facebookfb","facebook-fb","facebook-ig","facebooklaura"]):

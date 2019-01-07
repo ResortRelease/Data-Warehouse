@@ -56,13 +56,14 @@ dispos = pd.read_csv(
     encoding="ISO-8859-1",
 )
 bar.next()
-dispos = dispos.drop(columns=['description', 'qareport2', 'fronter', 'status', 'timezone'])
+dispos = dispos.drop(columns=['description', 'qareport2', 'fronter', 'status', 'timezone', 'timeEST'])
 
 dispos['dispo'] = dispos['dispo'].str.lower()
 dispos['postion'] = dispos['dispo'].apply(employee)
 dispos['sentiment'] = dispos['dispo'].apply(sentiment)
 dispos['type'] = dispos['dispo'].apply(contact_type)
+dispos['date'] = dispos['date'].apply(rr_fun.format_date)
 
 bar.next()
-dispos.to_csv('./Exports/export-dipos.csv')
+dispos.to_csv('./Exports/export-dipos.csv', index=False)
 bar.finish()

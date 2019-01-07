@@ -61,17 +61,6 @@ def fronter_full_name(name):
   else:
     return "Taylor M." 
 
-# Format the dates to MM/DD/YYYY
-def format_date(date):
-  if pd.isna(date) == False:
-    string_date = str(date)
-    month = string_date[4:6]
-    day = string_date[6:8]
-    year = string_date[0:4]
-    return (f'{month}/{day}/{year}')
-  else:
-    return False
-
 def segment_list():
   # Drop dnc with 1 
   contacts = contacts[contacts["dnc"].str.contains('1')==False]
@@ -107,9 +96,9 @@ def generate_email_list():
   print("\n Removed emails:", contacts.shape[0])
 
   # Clean dates
-  contacts['datecr'] = contacts['datecr'].apply(format_date)
-  contacts['dateASAP'] = contacts['dateASAP'].apply(format_date)
-  contacts['salesdate'] = contacts['salesdate'].apply(format_date)
+  contacts['datecr'] = contacts['datecr'].apply(rr_fun.format_date)
+  contacts['dateASAP'] = contacts['dateASAP'].apply(rr_fun.format_date)
+  contacts['salesdate'] = contacts['salesdate'].apply(rr_fun.format_date)
 
   # Drop if there is a sale date
   contacts = contacts.loc[contacts['salesdate'].isin([False])]
@@ -135,9 +124,9 @@ def generate_email_list():
   contacts = contacts.loc[-contacts['lastdispo'].isin([False])]
   print("\n Removed terminated:", contacts.shape[0])
 
-  # last fronter
-  contacts['Agent Full'] = contacts['reserveuser'].apply(fronter_full_name)
-  contacts['Agent First'] = contacts['reserveuser'].apply(fronter_name)
+  # # last fronter
+  # contacts['Agent Full'] = contacts['reserveuser'].apply(fronter_full_name)
+  # contacts['Agent First'] = contacts['reserveuser'].apply(fronter_name)
 
   # Merge duplicates
   contacts = contacts.groupby('EmailAddress').agg({
@@ -149,8 +138,6 @@ def generate_email_list():
                               'First Name': 'first', 
                               'Last Name': 'first', 
                               'HomePhone': 'first', 
-                              'Agent Full': 'first', 
-                              'Agent First': 'first', 
                               'hasform': ', '.join, 
                               'status': ', '.join, 
                               'dnc':', '.join})
@@ -168,9 +155,28 @@ def generate_email_list():
   contacts = contacts.loc[-contacts['status'].isin([False])]
   print("\n Only status 1 and 2:", contacts.shape[0])
 
-  contacts = contacts.drop(columns=['status', 'hasform', 'dnc'])
+  # aggregate function messes up the index
+  contacts = contacts.reset_index()
 
-  contacts.to_csv('./Exports/export-email.csv')
+  lastdispo = pd.read_csv(
+      # dispo['Body'],
+      './Exports/finaldispos.csv',
+      index_col=False,
+      low_memory=False,
+      encoding="ISO-8859-1",
+  )
+
+  contacts = pd.merge(contacts, lastdispo, how='inner',
+        left_on='dealid', right_on='dealid')
+
+  contacts['Fronter First'] = contacts['Fronter First'].apply(fronter_name)
+  contacts['Fronter Last'] = contacts['Fronter Last'].apply(fronter_name)
+
+  contacts['agent-full'] = contacts['Fronter First'].astype(str) + " " + contacts['Fronter Last']
+
+  contacts = contacts[['dealid', 'EmailAddress', 'datecr', 'dateASAP', 'agent-full', 'Fronter First', 'Fronter Last', 'First Name', 'status']]
+
+  contacts.to_csv('./Exports/export-email.csv', index=False)
 
   bar.next()
   bar.finish()
@@ -229,26 +235,25 @@ def generate_phone_list():
   contacts = contacts.loc[-contacts['status'].isin([False])]
   print("\n Only status 1 and 2:", contacts.shape[0])
 
+  # aggregate function messes up the index
   contacts = contacts.reset_index()
 
+  # dispo = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/Dispo1.csv')
+
   lastdispo = pd.read_csv(
-      # users['Body'],
+      # dispo['Body'],
       './Exports/finaldispos.csv',
       index_col=False,
       low_memory=False,
       encoding="ISO-8859-1",
   )
 
-  print(contacts.head())
-
   contacts = pd.merge(contacts, lastdispo, how='inner',
         left_on='dealid', right_on='dealid')
 
-  contacts['fname'] = contacts['fname'].apply(fronter_name)
+  contacts = contacts[['dealid', 'HomePhone', 'datecr', 'dateASAP', 'Fronter First', 'Fronter Last', 'First Name', 'status']]
 
-  contacts = contacts[['dealid', 'HomePhone', 'datecr', 'dateASAP', 'fname', 'First Name']]
-
-  contacts.to_csv('./Exports/export-phone.csv')
+  contacts.to_csv('./Exports/export-phone.csv', index=False)
   bar.next()
   bar.finish()
 

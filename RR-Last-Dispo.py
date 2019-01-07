@@ -55,7 +55,11 @@ dispos = dispos.sort_values('cleanDate').groupby('dealid').tail(1)
 dispos = pd.merge(dispos, users, how='left',
         left_on='userid', right_on='userid')
 
+dispos['fname'] = dispos['fname'].apply(rr_fun.fronter_name)
+dispos['lname'] = dispos['lname'].apply(rr_fun.fronter_name)
+
 # Only need a couple columns
-dispos = dispos[['dealid', 'userid', 'fname']]
+dispos = dispos[['dealid', 'userid', 'fname', 'lname']]
+dispos.rename(columns={'fname': 'Fronter First', 'lname': 'Fronter Last'}, inplace=True)
 
 dispos.to_csv('./Exports/finaldispos.csv')

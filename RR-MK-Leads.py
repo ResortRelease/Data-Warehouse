@@ -158,7 +158,7 @@ contacts['base64'] = contacts.index.map(str)
 contacts['base64'] = contacts['base64'].apply(rr_fun.stringToBase64)
 
 # Find the difference in days
-contacts['days'] = abs((contacts['dateASAP'] - contacts['salesdate']).dt.days)
+contacts['days'] = abs((contacts['datecr'] - contacts['salesdate']).dt.days)
 
 # Number of dispos
 dispos = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/Dispo1.csv')
@@ -176,12 +176,12 @@ contacts['Dispo Count'] = pd.Series(contacts.index, index=contacts.index).map(di
 contacts['was sold'] = contacts["salesdate"].apply(rr_fun.was_sold)
 
 # Remove some extra fields
-contacts = contacts[["dealid", "status", "Brand", "source", "SubSource", "datecr", "dateASAP", "salesdate", "cancelsale", "utm_term", "utm_campaign", "utm_source", "utm_medium", "utm_content", "hearduson", "total sold", "base64", "days", "was sold"]]
+contacts = contacts[["dealid", "status", "Brand", "source", "SubSource", "datecr", "dateASAP", "salesdate", "cancelsale", "total sold", "base64", "days", "was sold", "hasform", "hasapp"]]
 
 # Save the final product as a csv.
-# contacts.to_csv('./Exports/export-mk.csv')
+contacts.to_csv('./Exports/export-mk.csv', index=False)
 
-final_csv = contacts.to_csv(None)
+final_csv = contacts.to_csv(None, index=False)
 s3_resource = boto3.resource('s3')
 s3_resource.Object('rr-data-test', 'export-mk.csv').put(Body=final_csv)
 bar.next()
