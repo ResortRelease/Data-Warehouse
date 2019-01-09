@@ -20,12 +20,11 @@ def clean_client_name(x):
     x = x.lstrip()
     x = x.rstrip()
     x = re.sub(r"\(.*\)","", x) # Remove "(anything)"
+    x = re.sub(r"[^a-zA-Z0-9 -]","", x) # Remove weird emoji stuff
     string_array = x.split(" ") # Create array of strings
     name_length = len(string_array) # Count the length of array
     fullname = ''
-    if (name_length == 0):
-      fullname = "there " + " !"
-    elif(name_length == 1):
+    if (name_length == 1):
       fullname = string_array[0]
     elif (name_length == 2):
       fullname = string_array[0] + " " + string_array[1]
@@ -33,9 +32,13 @@ def clean_client_name(x):
       fullname = string_array[0] + " " + string_array[2]
     elif (name_length > 4):
       fullname = string_array[0] + " " + string_array[name_length - 1]
+    else:
+      fullname = "there !"
 
     cleaned = fullname.title()
     return cleaned
+  else:
+    return "there"
 
 def clean_number(number):
   pattern = re.compile("^(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$")
