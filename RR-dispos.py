@@ -66,4 +66,13 @@ dispos['date'] = dispos['date'].apply(rr_fun.format_date)
 
 bar.next()
 dispos.to_csv('./Exports/export-dipos.csv', index=False)
+
+dispos = pd.crosstab(
+    dispos['dealid'],
+    columns=dispos['type'],
+    values=dispos['type'],
+    aggfunc='count')
+
+dispos.to_csv('./Exports/count-dispos.csv', index=False)
+
 bar.finish()
