@@ -37,7 +37,7 @@ def load_contacts():
 
   # We only need a handful of columns
   # contacts.drop(columns=['status', 'datecr', 'salesdate', 'ClientName', 'NameofResort', 'HomePhone', 'EmailAddress', 'lastdispo', 'hasform', 'dnc'])
-  contacts = contacts.drop(columns=['LeadSource', 'SubSource', 'timestamp', 'timeASAP', 'aweberid', 'salesfusionid', 'mortgage', 'appsetdate', 'appverdate', 'cancelsale', 'holdsale', 'sold_tr', 'sold_mt', 'sold_tr_rev', 'sold_mt_rev', 'CLOSER_REP', 'VERIFY', 'StreetAddress', 'City', 'State', 'ZipCode', 'SecondaryPhone', 'timezone', 'reserve', 'reservetime',  'lastfronter', 'lastdispodate', 'emergency', 'utm_term', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'hasapp', 'sold_tr_rev_net', 'sold_mt_rev_net', 'hearduson', 'heardother', 'sold_tr1', 'sold_mt1', 'tfdb_case', 'qareport', 'qareport1', 'MQL', 'SQL', 'SQT', 'SQT.1', 'Nurture'])
+  contacts = contacts.drop(columns=['LeadSource', 'SubSource', 'timestamp', 'timeASAP', 'aweberid', 'salesfusionid', 'mortgage', 'appsetdate', 'appverdate', 'cancelsale', 'holdsale', 'sold_tr', 'sold_mt', 'sold_tr_rev', 'sold_mt_rev', 'CLOSER_REP', 'VERIFY', 'StreetAddress', 'City', 'State', 'ZipCode', 'SecondaryPhone', 'timezone', 'reserve', 'reservetime',  'lastfronter', 'lastdispodate', 'emergency', 'utm_term', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'hasapp', 'sold_tr_rev_net', 'sold_mt_rev_net', 'hearduson', 'heardother', 'sold_tr1', 'sold_mt1', 'tfdb_case', 'qareport', 'qareport1', 'MQL', 'SQL', 'SQT', 'Nurture'])
 
   return contacts
 
@@ -73,12 +73,15 @@ def segment_list():
   contacts = contacts[contacts["lastdispo"].str.contains('DNC|WRONG|GOTRID|AWC|CANT|NIT')==False]
   contacts = contacts.loc[-contacts['lastdispo'].isin([False])]
 
-  # Optional: Filter down to users who have been contacted recently
-  contacts = contacts[contacts["hasform"].str.contains('nan')==False]
-  contacts = contacts.loc[-contacts['hasform'].isin([False])]
+  # # Optional: Filter down to users who have been contacted recently
+  # contacts = contacts[contacts["hasform"].str.contains('nan')==False]
+  # contacts = contacts.loc[-contacts['hasform'].isin([False])]
 
   contacts = contacts[contacts["status"].str.contains('1|2')==True]
   contacts = contacts.loc[-contacts['status'].isin([False])]
+
+  contacts = contacts[contacts["group"].str.contains('26|58')==True]
+  contacts = contacts.loc[-contacts['group'].isin([True])]
 
 def generate_email_list():
   contacts = load_contacts()
@@ -158,9 +161,11 @@ def generate_email_list():
   # aggregate function messes up the index
   contacts = contacts.reset_index()
 
+  dispo = s3.get_object(Bucket="rr-data-test", Key='last-dispo.csv')
+  
   lastdispo = pd.read_csv(
-      # dispo['Body'],
-      './Exports/finaldispos.csv',
+      dispo['Body'],
+      # './Exports/finaldispos.csv',
       index_col=False,
       low_memory=False,
       encoding="ISO-8859-1",
@@ -238,11 +243,11 @@ def generate_phone_list():
   # aggregate function messes up the index
   contacts = contacts.reset_index()
 
-  # dispo = s3.get_object(Bucket=BUCKET_NAME, Key='DUMP/Dispo1.csv')
+  dispo = s3.get_object(Bucket="rr-data-test", Key='last-dispo.csv')
 
   lastdispo = pd.read_csv(
-      # dispo['Body'],
-      './Exports/finaldispos.csv',
+      dispo['Body'],
+      # './Exports/finaldispos.csv',
       index_col=False,
       low_memory=False,
       encoding="ISO-8859-1",
@@ -250,6 +255,8 @@ def generate_phone_list():
 
   contacts = pd.merge(contacts, lastdispo, how='inner',
         left_on='dealid', right_on='dealid')
+  
+  contacts[['First Name']] = contacts[['First Name']].fillna(value="there")
 
   contacts = contacts[['dealid', 'HomePhone', 'datecr', 'dateASAP', 'Fronter First', 'Fronter Last', 'First Name', 'status']]
 
