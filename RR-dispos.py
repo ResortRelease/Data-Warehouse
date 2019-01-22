@@ -65,7 +65,7 @@ dispos['type'] = dispos['dispo'].apply(contact_type)
 dispos['date'] = dispos['date'].apply(rr_fun.format_date)
 
 bar.next()
-dispos.to_csv('./Exports/export-dipos.csv', index=False)
+dispos.to_csv('./Exports/export-dispos.csv', index=False)
 
 dispos = pd.crosstab(
     dispos['dealid'],
