@@ -63,6 +63,7 @@ dispos['postion'] = dispos['dispo'].apply(employee)
 dispos['sentiment'] = dispos['dispo'].apply(sentiment)
 dispos['type'] = dispos['dispo'].apply(contact_type)
 dispos['date'] = dispos['date'].apply(rr_fun.format_date)
+dispos['date'] = pd.to_datetime(dispos['date'])
 
 bar.next()
 dispos.to_csv('./Exports/export-dispos.csv', index=False)
