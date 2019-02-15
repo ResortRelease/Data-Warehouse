@@ -80,8 +80,8 @@ def segment_list():
   contacts = contacts[contacts["status"].str.contains('1|2')==True]
   contacts = contacts.loc[-contacts['status'].isin([False])]
 
-  contacts = contacts[contacts["group"].str.contains('26|58')==True]
-  contacts = contacts.loc[-contacts['group'].isin([True])]
+  contacts = contacts[contacts["Group"].str.contains('47|55')==True]
+  contacts = contacts.loc[contacts['Group'].isin([True])]
 
 def generate_email_list():
   contacts = load_contacts()
@@ -131,6 +131,10 @@ def generate_email_list():
   # contacts['Agent Full'] = contacts['reserveuser'].apply(fronter_full_name)
   # contacts['Agent First'] = contacts['reserveuser'].apply(fronter_name)
 
+  contacts['Group'] = contacts['Group'].astype(str)
+  contacts = contacts[contacts["Group"].str.contains('47|55')==True]
+  contacts = contacts.loc[-contacts['Group'].isin([False])]
+
   # Merge duplicates
   contacts = contacts.groupby('EmailAddress').agg({
                               'dealid': 'first',
@@ -143,10 +147,12 @@ def generate_email_list():
                               'HomePhone': 'first', 
                               'hasform': ', '.join, 
                               'status': ', '.join, 
+                              'Group': ', '.join, 
                               'dnc':', '.join})
 
+  contacts['dnc'] = contacts['dnc'].astype(str)
   # Drop dnc with 1 
-  contacts = contacts[contacts["dnc"].str.contains('1')==False]
+  contacts = contacts[contacts['dnc'].str.contains('1')==False]
   contacts = contacts.loc[-contacts['dnc'].isin([False])]
   print("\n Removed DNC:", contacts.shape[0])
 
@@ -154,6 +160,7 @@ def generate_email_list():
   # contacts = contacts[contacts["hasform"].str.contains('nan')==False]
   # contacts = contacts.loc[contacts['hasform'].isin([False])]
 
+  contacts['status'] = contacts['status'].astype(str)
   contacts = contacts[contacts["status"].str.contains('1|2')==True]
   contacts = contacts.loc[-contacts['status'].isin([False])]
   print("\n Only status 1 and 2:", contacts.shape[0])
@@ -179,7 +186,7 @@ def generate_email_list():
 
   contacts['agent-full'] = contacts['Fronter First'].astype(str) + " " + contacts['Fronter Last']
 
-  contacts = contacts[['dealid', 'EmailAddress', 'datecr', 'dateASAP', 'agent-full', 'Fronter First', 'Fronter Last', 'First Name', 'status']]
+  contacts = contacts[['dealid', 'EmailAddress', 'HomePhone', 'datecr', 'dateASAP', 'agent-full', 'Fronter First', 'Fronter Last', 'First Name', 'status', 'Group']]
 
   contacts.to_csv('./Exports/export-email.csv', index=False)
 
@@ -239,6 +246,10 @@ def generate_phone_list():
   contacts = contacts[contacts["status"].str.contains('1|2')==True]
   contacts = contacts.loc[-contacts['status'].isin([False])]
   print("\n Only status 1 and 2:", contacts.shape[0])
+
+  contacts['Group'] = contacts['Group'].astype(str)
+  contacts = contacts[contacts["Group"].str.contains('47|55')==True]
+  contacts = contacts.loc[-contacts['Group'].isin([False])]
 
   # aggregate function messes up the index
   contacts = contacts.reset_index()
