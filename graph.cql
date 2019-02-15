@@ -1,17 +1,16 @@
 // 1) Set indexes
 CREATE INDEX ON :contact(email);
-CREATE INDEX ON :contact(dealid);
+CREATE CONSTRAINT ON (contact:contact) ASSERT contact.dealid IS UNIQUE
 CREATE INDEX ON :dispo(type);
 
 CREATE INDEX ON :marketing(id);
 CREATE INDEX ON :marketing(name);
-CREATE INDEX ON :mrk_message(id);
 
-// 2) Import the latest deal data x2 to import the properties
+// 2) Import the latest deal
 USING PERIODIC COMMIT
 LOAD CSV WITH HEADERS FROM "file:///export-mk.csv" AS contact
 MERGE (c:contact {dealid: toInteger(contact['dealid'])})
-ON match set c.salesdate = contact['salesdate'], 
+ON create set c.salesdate = contact['salesdate'], 
 c.datecr = contact['datecr'], 
 c.dateASAP = contact['dateASAP'], 
 c.days = toInteger(contact['days']), 
@@ -24,7 +23,7 @@ c.cancel = contact['cancelsale']
 
 // 3) Import the latest dispo
 USING PERIODIC COMMIT
-LOAD CSV WITH HEADERS FROM "file:///export-dispos.csv" AS dispo
+LOAD CSV WITH HEADERS FROM "file:///dispos.csv" AS dispo
 MERGE (c:dispo {type: dispo['dispo']})
 
 // 4) Create dispo relationship
@@ -60,11 +59,11 @@ Match (c:contact {
 (m:marketing {name: message['Name']})
 merge (c)<-[:mrk_message {date_sent: message['Date']}]-(m)
 
-// 6) (Re)Import emails (2x)
+// 6) Import emails
 USING PERIODIC COMMIT
 LOAD CSV WITH HEADERS FROM "file:///emails.csv" AS email
 MERGE (e:marketing {id: toInteger(email['id'])})
-ON match set e.category_id = toInteger(email['category_id']), 
+ON create set e.category_id = toInteger(email['category_id']), 
 e.subject = email['subject'], 
 e.name = email['name'], 
 e.read_count = toInteger(email['read_count']), 
@@ -79,12 +78,12 @@ Match (c:contact {
 }), (m:marketing {
   id: toInteger(sent['email_id'])
 })
-merge (c)<-[:mrk_message ]-(m)
+merge (c)<-[:mrk_message {id: toInteger(sent['id'])}]-(m)
 
 // 8) Import email sent relationship
 USING PERIODIC COMMIT
 LOAD CSV WITH HEADERS FROM "file:///email-sent.csv" AS sent
-Match (c)-[mk:mrk_message{id: toInteger(sent['id'])}]-(m)
+Match (c:contact {email: sent['email_address']})-[mk:mrk_message{id: toInteger(sent['id'])}]-(m:marketing {id: toInteger(sent['email_id'])})
 set mk.date_sent = sent['date_sent'], 
 mk.is_read = sent['is_read'], 
 mk.date_read = sent['date_read'], 
@@ -166,6 +165,13 @@ match (dispo)-[]-(c)
 where dispo.date > "01/07/2019"
 return c.dealid, c.status, c.salesdate, c.datecr, c.dateASAP, c.days, m.name, m.version fullDispos, count(dispo) as after
 
+// Last attribution
+MATCH (c:contact)
+where c.status = "6" OR c.status = "7"
+OPTIONAL MATCH (m:marketing)-[mk:mrk_message]-(c)
+WITH c, m, mk
+ORDER BY mk.date_sent
+RETURN c.dealid as dealid, c.datecr as datecr, c.dateASAP as dateASAP, c.salesdate as SaleDate, c.email as email, count(m) as MessagesSent, last(collect(m.name)) as LastMessage, last(collect(m.type)) as LastType
 
 MATCH (c:contact)
 where c.salesdate > '2019-01-01' AND c.salesdate < '2019-01-26' AND (c.status = "6" OR c.status = "7")  
@@ -174,3 +180,8 @@ WITH c, m, mk
 ORDER BY mk.date_sent
 WITH c, m, last(collect(m)) AS most_recent_c
 RETURN c.dealid, c.salesdate, c.email, m.name
+
+// App set
+match (d:dispo {type: "sale-sales completed"})-[du:dispo_update]-(c:contact)-[mk:mrk_message]-(m:marketing)
+where datetime(du.date) > datetime(mk.date_sent) AND datetime(du.date) < datetime(mk.date_sent) + duration('P7D')
+return m.name as Email_Name, count(c) as Opens, m.sent_count as Sent, count(du.date) as App_Set
